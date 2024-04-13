@@ -73,7 +73,7 @@ void setup() {
   // pinMode(temp_SDA, );
   // pinMode(temp_SCK, OUTPUT);
 
-  // Wire.beginTransmission(0x38); // Device Address
+  Wire.begin(0x38); // Device Address
   // Wire.write(); // Register address of data
   // Wire.endTransmission();
 
@@ -83,7 +83,11 @@ void loop() {
   // put your main code here, to run repeatedly:
   // Serial.println("MAC Address = " + String(WiFi.macAddress()));
   // Serial.println("Here");
-
+  Wire.requestFrom(0x38, 4);
+  while(Wire.available()){
+    uint8_t data = Wire.read();
+    Serial.println(data);
+  }
   // Wire.requestFrom(0x38, 1);
   // data = Wire.read();
 
