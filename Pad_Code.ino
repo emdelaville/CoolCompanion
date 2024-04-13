@@ -13,9 +13,10 @@
 #define temp_SCK A5
 
 // Define Constants
-#define padMacAddr "30:AE:A4:07:0D:64"
-#define fanMacAddr "30:AE:A4:07:0D:64"
-
+// #define padMacAddr "EC:DA:3B:63:AE:80"
+// #define fanMacAddr "34:85:18:7B:C4:24"
+uint8_t padMacAddr[] = {0xEC, 0xDA, 0x3B, 0x63, 0xAE, 0x80};
+uint8_t fanMacAddr[] = {0x34, 0x85, 0x18, 0x7B, 0xC4, 0x24};
 
 // Create Timers
 unsigned long timer;
@@ -28,6 +29,8 @@ typedef struct message{
   float hum;
 } message;
 
+float incomingTemp, incomingHum;
+
 message incomingReadings;
 esp_now_peer_info_t peerInfo;
 
@@ -39,8 +42,10 @@ void dataRecieved(const uint8_t* mac, const uint8_t *incomingData, int len){
   memcpy(&incomingReadings, incomingData, sizeof(incomingReadings));
   Serial.print("Bytes received: ");
   Serial.println(len);
-  // incomingTemp = incomingReadings.temp;
-  // incomingHum = incomingReadings.hum;
+  incomingTemp = incomingReadings.temp;
+  incomingHum = incomingReadings.hum;
+  Serial.println("Temperature: " + String(incomingTemp));
+  Serial.println("Humidity: " + String(incomingHum));
 }
 
 void setup() {
@@ -48,8 +53,9 @@ void setup() {
 
   // initialize serial communication at 9600 bits per second:
   Serial.begin(9600);
+  while(!Serial);
   WiFi.mode(WIFI_MODE_STA);
-  Serial.print("MAC Address = " + String(WiFi.macAddress()));
+  Serial.println("MAC Address = " + String(WiFi.macAddress()));
 
   if(esp_now_init() != ESP_OK){
     Serial.print("Error initializing ESP-NOW");
@@ -70,11 +76,13 @@ void setup() {
   // Wire.beginTransmission(0x38); // Device Address
   // Wire.write(); // Register address of data
   // Wire.endTransmission();
-  
+
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
+  // Serial.println("MAC Address = " + String(WiFi.macAddress()));
+  // Serial.println("Here");
 
   // Wire.requestFrom(0x38, 1);
   // data = Wire.read();
