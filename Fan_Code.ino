@@ -53,6 +53,7 @@ float rollingAvgHum(float humidityReading, int second_counter);
 void printSensorReadings(float temperature, float humidity, int mode);
 //Display Initalization end //----------------------
 
+void updateFan(float incomingTemp, float incomingHum, int mode);
 // Define pins
 #define ENA A7
 #define IN1 D3
@@ -249,18 +250,19 @@ void printSensorReadings(float temperature, float humidity, int mode) //--------
   tft.println("%");
 }
 
-void updateFan(incomingTemp, incomingHum, mode){
+void updateFan(float incomingTemp, float incomingHum, int mode)
+{
   switch(mode)
   {
     case TEMP_F_MODE:
       
       break;
     case TEMP_C_MODE:
-      if(temperature < 25)
+      if(incomingTemp < 24)
         fanState = OFF;
-      else if(temperature < 27)
+      else if(incomingTemp < 25)
         fanState = TWO;
-      else if(temperature < 29)
+      else if(incomingTemp < 26)
         fanState = THREE;
       break;
   }
@@ -308,4 +310,3 @@ void fanStateMachine(){
   digitalWrite(D3, HIGH);
   digitalWrite(D4, LOW);
 }
-
