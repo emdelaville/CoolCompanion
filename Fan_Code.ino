@@ -8,6 +8,51 @@
 #include <esp_now.h>
 
 
+//Display Initalization//----------------------
+#include <Adafruit_GFX.h>     // Core graphics library
+#include <Adafruit_ST7735.h>  // Hardware-specific library for ST7735
+#include <Adafruit_ST7789.h>  // Hardware-specific library for ST7789
+#include <SPI.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+#if defined(ARDUINO_FEATHER_ESP32)  // Feather Huzzah32
+#define TFT_CS 14
+#define TFT_RST 15
+#define TFT_DC 32
+
+#elif defined(ESP8266)
+#define TFT_CS 4
+#define TFT_RST 16
+#define TFT_DC 5
+
+#else
+// For the breakout board, you can use any 2 or 3 pins.
+// These pins will also work for the 1.8" TFT shield.
+//define ARDUINO pins
+#define TFT_CS 10
+#define TFT_RST 9  // Or set to -1 and connect to Arduino RESET pin
+#define TFT_DC 8
+#endif
+
+// include fonts
+#include <Fonts/FreeMonoBoldOblique12pt7b.h>
+#include <Fonts/FreeSerif9pt7b.h>
+
+#define AVG_AMOUNT 60 //defines how many readings to average
+#define TEMP_F_MODE 0
+#define TEMP_C_MODE 1
+
+//declaere display
+Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
+
+
+//function prototypes
+float rollingAvgTemp(float temperatureReading, int second_counter);
+float rollingAvgHum(float humidityReading, int second_counter);
+void printSensorReadings(float temperature, float humidity, int mode);
+//Display Initalization end //----------------------
+
 // Define pins
 
 
@@ -34,6 +79,8 @@ typedef struct message{
 
 message incomingReadings;// = (message*)malloc(sizeof(message));
 message outgoingData;
+float incomingTemp;
+float incomingHum;
 esp_now_peer_info_t peerInfo;
 
 void dataSent(const uint8_t* mac_addr, esp_now_send_status_t status){
@@ -68,7 +115,6 @@ void setup() {
 
   if (esp_now_add_peer(&peerInfo) != ESP_OK)
     Serial.print("Failed to add peer");
-
   esp_now_register_recv_cb(dataRecieved);
 
 
@@ -81,13 +127,20 @@ void setup() {
 
   //register a callback function to recieve ESPNOW transmissions
   
+
+  //Display Setup
+  tft.init(240, 320);  // Init ST7789 320x240
+  Serial.println(F("Initialized"));
+  tft.setRotation(3);
+  //set background to black
+  tft.fillScreen(ST77XX_BLACK);
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
 
-  outgoingData.temp = 70.0;
-  outgoingData.hum = 20.0;
+  // outgoingData.temp = 70.0;
+  // outgoingData.hum = 20.0;
 
   // esp_err_t result = esp_now_send(padMacAddr, (uint8_t *) &outgoingData, sizeof(outgoingData));
    
@@ -102,6 +155,89 @@ void loop() {
   // data = Wire.read();
   //systemStateMachine();
 
+  // int temp_second_flag = 0;
+  // int hum_second_flag = 0;
+  int second_flag =0;
+  long unsigned int second_counter =0;
+  float hum_reading;
+  float temp_reading;
+
+  int mode = TEMP_F_MODE;
+
+  float AvgHumidity;
+  float AvgTemperatureC;
+
+  if(millis() % 1000 == 1)
+  { //every second
+    second_flag = 1; //raise flag to signal average
+    second_counter++;
+  }
+  mode = TEMP_C_MODE;
+
+  if(second_flag == 1){
+    switch(mode)
+      {
+        case TEMP_F_MODE:
+          //printSensorReadings(rollingAvgHum(hum_reading, second_counter), rollingAvgTemp(temp_reading, second_counter), mode);
+          printSensorReadings(incomingTemp, incomingHum, mode);
+          break;
+        case TEMP_C_MODE:
+          printSensorReadings(incomingTemp, incomingHum, mode);
+          break;
+      }
+      second_flag = 0;
+  }
+
+}
+
+void printSensorReadings(float temperature, float humidity, int mode) //-------------------------------------------------------------------------------------
+{ 
+  //if temperature reads below one digit, place a black box after temperature (may not be needed)
+  if(temperature < 10){
+    //tft.fillRect(); //print black box where value will be. 
+  }
+
+  //if humidity reads below one digit, place a black box after temperature
+  if(humidity < 10){
+    //tft.fillRect(); //print black box where value will be. 
+  }
+
+  //tft.drawRectangle();
+  //draw bounding boxes around values
+  // tft.fillRoundRect(25, 10, 78, 60, 8, ST77XX_WHITE);
+  // tft.fillRoundRect(25, 90, 78, 60, 8, ST77XX_WHITE);
+
+  //display temperature reading
+  tft.setTextSize(5);
+  tft.setTextWrap(false);
+  tft.setFont();
+
+  tft.setCursor(10, 10);
+  //tft.setTextColor(0xff4112);
+  tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
+  tft.println(temperature);
+
+  //tft.setCursor(50, 10);
+  //tft.setTextColor(ST77XX_WHITE);
+
+  switch(mode)
+  {
+    case TEMP_F_MODE:
+      tft.println("F");
+      break;
+    case TEMP_C_MODE:
+      tft.println("C");
+      break;
+  }
+
+  //dislay humidity reading
+  //tft.setCursor(10, 100);
+  //tft.setTextColor(0x8fbaff);
+  tft.println(humidity);
+
+  //tft.setCursor(50, 30);
+  tft.setTextColor(ST77XX_WHITE);
+  tft.println("%");
 }
 
 void systemStateMachine(){
