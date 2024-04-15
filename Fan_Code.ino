@@ -54,7 +54,9 @@ void printSensorReadings(float temperature, float humidity, int mode);
 //Display Initalization end //----------------------
 
 // Define pins
-
+#define ENA A7
+#define IN1 D3
+#define IN2 D4
 
 // Define Constants
 // #define padMacAddr "EC:DA:3B:63:AE:80"
@@ -122,7 +124,12 @@ void setup() {
   fanState = OFF;
 
   //pinMode();
+  pinMode(A7, OUTPUT);
+  pinMode(D3, OUTPUT);
+  pinMode(D4, OUTPUT);
 
+  digitalWrite(D3, LOW);
+  digitalWrite(D4, LOW);
 
 
   //register a callback function to recieve ESPNOW transmissions
@@ -180,9 +187,11 @@ void loop() {
         case TEMP_F_MODE:
           //printSensorReadings(rollingAvgHum(hum_reading, second_counter), rollingAvgTemp(temp_reading, second_counter), mode);
           printSensorReadings(incomingTemp, incomingHum, mode);
+          updateFan(incomingTemp, incomingHum, mode);
           break;
         case TEMP_C_MODE:
           printSensorReadings(incomingTemp, incomingHum, mode);
+          updateFan(incomingTemp, incomingHum, mode);
           break;
       }
       second_flag = 0;
@@ -240,6 +249,24 @@ void printSensorReadings(float temperature, float humidity, int mode) //--------
   tft.println("%");
 }
 
+void updateFan(incomingTemp, incomingHum, mode){
+  switch(mode)
+  {
+    case TEMP_F_MODE:
+      
+      break;
+    case TEMP_C_MODE:
+      if(temperature < 25)
+        fanState = OFF;
+      else if(temperature < 27)
+        fanState = TWO;
+      else if(temperature < 29)
+        fanState = THREE;
+      break;
+  }
+  fanStateMachine();
+}
+
 void systemStateMachine(){
   switch(systemState){
     case WAKE_UP:
@@ -266,17 +293,19 @@ void updateDisplay(){
 void fanStateMachine(){
   switch(fanState){
     case OFF:
-      //Drive motor off
+      analogWrite(ENA, 0);
       break;
     case ONE:
-      // Switch Speed and drive motor
+      analogWrite(ENA, 100);
       break;
     case TWO:
-      // Switch Speed and drive motor
+      analogWrite(ENA, 175);
       break;
     case THREE:
-      // Switch Speed and drive motor
+      analogWrite(ENA, 255);
       break;
   }
+  digitalWrite(D3, HIGH);
+  digitalWrite(D4, LOW);
 }
 
