@@ -44,8 +44,8 @@ void dataRecieved(const uint8_t* mac, const uint8_t* incomingData, int len){
   memcpy(&incomingReadings, incomingData, sizeof(incomingReadings));
   Serial.print("Bytes received: ");
   Serial.println(len);
-  // incomingTemp = incomingReadings.temp;
-  // incomingHum = incomingReadings.hum;
+  incomingTemp = incomingReadings.temp;
+  incomingHum = incomingReadings.hum;
 }
 
 void setup() {
@@ -89,15 +89,15 @@ void loop() {
   outgoingData.temp = 70.0;
   outgoingData.hum = 20.0;
 
-  esp_err_t result = esp_now_send(padMacAddr, (uint8_t *) &outgoingData, sizeof(outgoingData));
+  // esp_err_t result = esp_now_send(padMacAddr, (uint8_t *) &outgoingData, sizeof(outgoingData));
    
-  if (result == ESP_OK) {
-    Serial.println("Sent with success");
-  }
-  else {
-    Serial.println("Error sending the data");
-  }
-  delay(10000);
+  // if (result == ESP_OK) {
+  //   Serial.println("Sent with success");
+  // }
+  // else {
+  //   Serial.println("Error sending the data");
+  // }
+  // delay(10000);
   // Wire.requestFrom(0x38, 1);
   // data = Wire.read();
   //systemStateMachine();
