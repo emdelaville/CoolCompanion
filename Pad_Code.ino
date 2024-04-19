@@ -30,14 +30,18 @@ unsigned long timer;
 // Any Enums
 enum SystemState {WAKE_UP, RECV, SEND, SLEEP} systemState;
 
-typedef struct message{
+typedef struct outMessage{
   float avgTemp;
-} message;
+} outMessage;
 
-float incomingTemp;
+typedef struct inMessage{
+  boolean onOrOff;
+} inMessage;
 
-message incomingReadings;
-message outgoingData;
+boolean isOn;
+
+inMessage incomingReadings;
+outMessage outgoingData;
 float sensorData[4];
 esp_now_peer_info_t peerInfo;
 
@@ -49,8 +53,8 @@ void dataRecieved(const uint8_t* mac, const uint8_t *incomingData, int len){
   memcpy(&incomingReadings, incomingData, sizeof(incomingReadings));
   Serial.print("Bytes received: ");
   Serial.println(len);
-  incomingTemp = incomingReadings.avgTemp;
-  Serial.println("Apparent Temperature: " + String(incomingTemp));
+  isOn = incomingReadings.onOrOff;
+  Serial.println("Device is on: " + String(isOn));
 }
 
 // Helper function for changing TCA output channel
@@ -72,32 +76,30 @@ void sensorInit(){
     Serial.println("Could not find sensor 2. Check wiring");
     // while (1) delay(10);
   }
-  // muxSelect(2);
-  // if (!aht3.begin()) {
-  //   Serial.println("Could not find sensor 3. Check wiring");
-  //   // while (1) delay(10);
-  // }
-  // muxSelect(3);
-  // if (!aht4.begin()) {
-  //   Serial.println("Could not find sensor 4. Check wiring");
-  //   // while (1) delay(10);
-  // }
+  muxSelect(2);
+  if (!aht3.begin()) {
+    Serial.println("Could not find sensor 3. Check wiring");
+    // while (1) delay(10);
+  }
+  muxSelect(3);
+  if (!aht4.begin()) {
+    Serial.println("Could not find sensor 4. Check wiring");
+    // while (1) delay(10);
+  }
 }
 
 void setup() {
   // put your setup code here, to run once:
 
-  // initialize serial communication at 9600 bits per second:
+  // initialize Serial communication at 9600 bits per second:
   Serial.begin(9600);
-  while(!Serial);
+  //while(!Serial);
+  delay(100);
   Wire.begin();
 
-   sensorInit();
+  sensorInit();
 
-  // if (!aht1.begin()) {
-  //   Serial.println("Could not find sensor. Check wiring");
-  //   while (1) delay(10);
-  // }
+  isOn = true;
   
   WiFi.mode(WIFI_MODE_STA);
   Serial.println("MAC Address = " + String(WiFi.macAddress()));
@@ -115,63 +117,67 @@ void setup() {
     Serial.print("Failed to add peer");
 
   esp_now_register_recv_cb(dataRecieved);
-  // pinMode(temp_SDA, );
-  // pinMode(temp_SCK, OUTPUT);
-
-  //Wire.begin(); // Device Address
-  // Wire.write(); // Register address of data
-  // Wire.endTransmission();
 }
 
 void loop() {
 
-  sensors_event_t humidity, temp;
-  Serial.println("\nSensor 1 ");
-  muxSelect(0);
-  aht1.getEvent(&humidity, &temp);// populate temp and humidity objects with fresh data
-  Serial.print("\tTemperature: "); Serial.print(temp.temperature); Serial.println(" degrees C");
-  Serial.print("\tHumidity: "); Serial.print(humidity.relative_humidity); Serial.println("% rH");
+  if(isOn){
+    sensors_event_t humidity, temp;
+    Serial.println("\nSensor 1 ");
+    muxSelect(0);
+    aht1.getEvent(&humidity, &temp);// populate temp and humidity objects with fresh data
+    Serial.print("\tTemperature: "); Serial.print(temp.temperature); Serial.println(" degrees C");
+    Serial.print("\tHumidity: "); Serial.print(humidity.relative_humidity); Serial.println("% rH");
 
-  sensorData[0] = apparentTemp(temp.temperature, humidity.relative_humidity);
-  Serial.print("\tApparent Temperature: "); Serial.print(sensorData[0]); Serial.println(" degrees C");
-
-
-  Serial.println("Sensor 2 ");
-  muxSelect(1);
-  aht2.getEvent(&humidity, &temp);// populate temp and humidity objects with fresh data
-  Serial.print("\tTemperature: "); Serial.print(temp.temperature); Serial.println(" degrees C");
-  Serial.print("\tHumidity: "); Serial.print(humidity.relative_humidity); Serial.println("% rH");
-
-  sensorData[1] = apparentTemp(temp.temperature, humidity.relative_humidity);
-  Serial.print("\tApparent Temperature: "); Serial.print(sensorData[1]); Serial.println(" degrees C");
+    sensorData[0] = apparentTemp(temp.temperature, humidity.relative_humidity);
+    Serial.print("\tApparent Temperature: "); Serial.print(sensorData[0]); Serial.println(" degrees C");
 
 
-  outgoingData.avgTemp = (sensorData[0] + sensorData[1])/2.0;
-  esp_err_t result = esp_now_send(fanMacAddr, (uint8_t *) &outgoingData, sizeof(outgoingData));
-   
-  if (result == ESP_OK) {
-    Serial.println("Sent with success");
+    Serial.println("Sensor 2 ");
+    muxSelect(1);
+    aht2.getEvent(&humidity, &temp);// populate temp and humidity objects with fresh data
+    Serial.print("\tTemperature: "); Serial.print(temp.temperature); Serial.println(" degrees C");
+    Serial.print("\tHumidity: "); Serial.print(humidity.relative_humidity); Serial.println("% rH");
+
+    sensorData[1] = apparentTemp(temp.temperature, humidity.relative_humidity);
+    Serial.print("\tApparent Temperature: "); Serial.print(sensorData[1]); Serial.println(" degrees C");
+
+    Serial.println("\nSensor 3 ");
+    muxSelect(2);
+    aht3.getEvent(&humidity, &temp);// populate temp and humidity objects with fresh data
+    Serial.print("\tTemperature: "); Serial.print(temp.temperature); Serial.println(" degrees C");
+    Serial.print("\tHumidity: "); Serial.print(humidity.relative_humidity); Serial.println("% rH");
+
+    sensorData[2] = apparentTemp(temp.temperature, humidity.relative_humidity);
+    Serial.print("\tApparent Temperature: "); Serial.print(sensorData[2]); Serial.println(" degrees C");
+
+
+    Serial.println("\nSensor 4 ");
+    muxSelect(3);
+    aht4.getEvent(&humidity, &temp);// populate temp and humidity objects with fresh data
+    Serial.print("\tTemperature: "); Serial.print(temp.temperature); Serial.println(" degrees C");
+    Serial.print("\tHumidity: "); Serial.print(humidity.relative_humidity); Serial.println("% rH");
+
+    sensorData[3] = apparentTemp(temp.temperature, humidity.relative_humidity);
+    Serial.print("\tApparent Temperature: "); Serial.print(sensorData[3]); Serial.println(" degrees C");
+
+    outgoingData.avgTemp = (sensorData[0] + sensorData[1] + sensorData[3] + sensorData[4])/4.0;
+    esp_err_t result = esp_now_send(fanMacAddr, (uint8_t *) &outgoingData, sizeof(outgoingData));
+    
+    if (result == ESP_OK) {
+      Serial.println("Sent with success");
+    }
+    else {
+      Serial.println("Error sending the data");
+    }
   }
-  else {
-    Serial.println("Error sending the data");
-  }
+  else{}
   delay(5000);
-  // }
-  // Wire.requestFrom(0x38, 1);
-  // data = Wire.read();
 }
 
 float apparentTemp(float temp, float hum){
     float dewpoint = temp - ((100 - hum) / 5); // the numbers are constants, RH =relative humidity, temperature must be in C
     float exponent = 5417.7530*((1/273.15)-(1/(273.15+dewpoint)));
-
     float humidex = temp + (0.5555*(6.11*exp(exponent)-10)); // apparent temp in C
-
-    //float heatIndex = C1 * (temp + C2 + ((temp - C3) * C4) + (C5 * hum));
     return humidex;
-}
-
-void parseData(String data){
-
-  return;
 }
