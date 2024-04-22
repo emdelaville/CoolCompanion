@@ -103,7 +103,7 @@ void setup() {
 
   // initialize serial communication at 9600 bits per second:
   Serial.begin(9600);
-  while(!Serial);
+  // while(!Serial);
   WiFi.mode(WIFI_MODE_STA);
   Serial.print("MAC Address = " + String(WiFi.macAddress()));
 
@@ -200,6 +200,7 @@ void loop() {
 
 }
 
+//extern unit8_t temp_icon[];
 void printSensorReadings(float temperature, float humidity, int mode) //-------------------------------------------------------------------------------------
 { 
   //if temperature reads below one digit, place a black box after temperature (may not be needed)
@@ -218,36 +219,51 @@ void printSensorReadings(float temperature, float humidity, int mode) //--------
   // tft.fillRoundRect(25, 90, 78, 60, 8, ST77XX_WHITE);
 
   //display temperature reading
-  tft.setTextSize(5);
+  tft.setTextSize(4);
   tft.setTextWrap(false);
-  tft.setFont();
-
-  tft.setCursor(10, 10);
+  //tft.setFont(&FreeSerif9pt7b);
+  tft.setCursor(0, 10);
   //tft.setTextColor(0xff4112);
-  tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
-  tft.println(temperature);
+  tft.setTextColor(ST77XX_RED, ST77XX_BLACK); //set text to white and background to black
 
-  //tft.setCursor(50, 10);
-  //tft.setTextColor(ST77XX_WHITE);
+  tft.cp437(true); // Use correct CP437 character codes
+  tft.print(temperature);
+
+  tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK); //set text to white and background to black
+  tft.write(0xF8); // Print the degrees symbol
 
   switch(mode)
   {
     case TEMP_F_MODE:
+    
       tft.println("F");
+      
       break;
     case TEMP_C_MODE:
+      //tft.println("C");
       tft.println("C");
+      
       break;
   }
 
+   tft.setTextColor(ST77XX_CYAN, ST77XX_BLACK); //set text to white and background to black
   //dislay humidity reading
   //tft.setCursor(10, 100);
   //tft.setTextColor(0x8fbaff);
-  tft.println(humidity);
+  // tft.setTextSize(1);
+  // //tft.println("----------------");
+  // void drawFastHLine(0, 60, 320, ST77XX_WHITE);
+  //tft.drawLine(0, 60, x, tft.height() - 1, color);
+  //tft.setTextSize(3);
+  tft.print(humidity); 
+  tft.write(0x25); //% symbol
+  tft.println();
 
-  //tft.setCursor(50, 30);
-  tft.setTextColor(ST77XX_WHITE);
-  tft.println("%");
+  // tft.setTextSize(3);
+  // tft.println("User Setting:");
+  // tft.print("HOT");
+
+  //drawBitmap(300, 10, 24, 24 temp_icon, ST77XX_WHITE);
 }
 
 void updateFan(float incomingTemp, float incomingHum, int mode)
