@@ -58,6 +58,10 @@ void updateFan(float incomingTemp, float incomingHum, int mode);
 #define ENA A7
 #define IN1 D3
 #define IN2 D4
+#define ON_OFF D5
+#define increase D6
+#define decrease D7
+#define modeSel D12
 
 // Define Constants
 // #define padMacAddr "EC:DA:3B:63:AE:80"
@@ -72,16 +76,31 @@ uint8_t fanMacAddr[] = {0x34, 0x85, 0x18, 0x7B, 0xC4, 0x24};
 unsigned long timer;
 
 // Any Enums
-enum SystemState {WAKE_UP, ACTIVE, SLEEP} systemState;
+//enum SystemState {WAKE_UP, ACTIVE, SLEEP} systemState;
 enum FanState {OFF, ONE, TWO, THREE} fanState;
+enum Mode {ACTIVE, EDIT} editMode;
 
-typedef struct message{
-  float temp;
-  float hum;
-} message;
 
-message incomingReadings;// = (message*)malloc(sizeof(message));
-message outgoingData;
+typedef struct inMessage{
+  float avgTemp;
+} inMessage;
+
+typedef struct outMessage{
+  boolean onOrOff;
+} outMessage;
+
+boolean isOn;
+int buttonVal1, prevButtonVal1;
+int buttonVal2, prevButtonVal2;
+int buttonVal3, prevButtonVal3;
+int buttonVal4, prevButtonVal4;
+
+volatile float targetAppTemp = 22.0;
+
+unsigned long currTime = 0;
+
+inMessage incomingReadings;// = (message*)malloc(sizeof(message));
+outMessage outgoingData;
 float incomingTemp;
 float incomingHum;
 esp_now_peer_info_t peerInfo;
@@ -94,8 +113,7 @@ void dataRecieved(const uint8_t* mac, const uint8_t* incomingData, int len){
   memcpy(&incomingReadings, incomingData, sizeof(incomingReadings));
   Serial.print("Bytes received: ");
   Serial.println(len);
-  incomingTemp = incomingReadings.temp;
-  incomingHum = incomingReadings.hum;
+  incomingTemp = incomingReadings.avgTemp;
 }
 
 void setup() {
@@ -121,13 +139,29 @@ void setup() {
   esp_now_register_recv_cb(dataRecieved);
 
 
-  systemState = WAKE_UP;
+  //systemState = WAKE_UP;
   fanState = OFF;
+
+  isOn = true;
+  prevButtonVal1 = HIGH;
+  buttonVal1 = HIGH;
+  prevButtonVal2 = HIGH;
+  buttonVal2 = HIGH;
+  prevButtonVal3 = HIGH;
+  buttonVal3 = HIGH;
+  prevButtonVal4 = HIGH;
+  buttonVal4 = HIGH;
 
   //pinMode();
   pinMode(A7, OUTPUT);
   pinMode(D3, OUTPUT);
   pinMode(D4, OUTPUT);
+  pinMode(ON_OFF, INPUT);
+  pinMode(increase, INPUT);
+  pinMode(decrease, INPUT);
+  pinMode(modeSel, INPUT);
+
+
 
   digitalWrite(D3, LOW);
   digitalWrite(D4, LOW);
@@ -147,57 +181,84 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
 
-  // outgoingData.temp = 70.0;
-  // outgoingData.hum = 20.0;
-
-  // esp_err_t result = esp_now_send(padMacAddr, (uint8_t *) &outgoingData, sizeof(outgoingData));
-   
-  // if (result == ESP_OK) {
-  //   Serial.println("Sent with success");
-  // }
-  // else {
-  //   Serial.println("Error sending the data");
-  // }
-  // delay(10000);
-  // Wire.requestFrom(0x38, 1);
-  // data = Wire.read();
-  //systemStateMachine();
-
-  // int temp_second_flag = 0;
-  // int hum_second_flag = 0;
-  int second_flag =0;
-  long unsigned int second_counter =0;
-  float hum_reading;
-  float temp_reading;
-
-  int mode = TEMP_F_MODE;
-
-  float AvgHumidity;
-  float AvgTemperatureC;
-
-  if(millis() % 1000 == 1)
-  { //every second
-    second_flag = 1; //raise flag to signal average
-    second_counter++;
+  int buttonVal1 = digitalRead(ON_OFF);
+  if(buttonVal1 != prevButtonVal1){
+    if(buttonVal1 == LOW){
+      // Serial.println("Button 1 Pressed");
+      isOn = !isOn;
+    }
+    delay(50);
   }
-  mode = TEMP_C_MODE;
+  prevButtonVal1 = buttonVal1;
 
-  if(second_flag == 1){
-    switch(mode)
-      {
-        case TEMP_F_MODE:
-          //printSensorReadings(rollingAvgHum(hum_reading, second_counter), rollingAvgTemp(temp_reading, second_counter), mode);
-          printSensorReadings(incomingTemp, incomingHum, mode);
-          updateFan(incomingTemp, incomingHum, mode);
-          break;
-        case TEMP_C_MODE:
-          printSensorReadings(incomingTemp, incomingHum, mode);
-          updateFan(incomingTemp, incomingHum, mode);
-          break;
-      }
-      second_flag = 0;
+  int buttonVal2 = digitalRead(increase);
+  if(buttonVal2 != prevButtonVal2){
+    if(buttonVal2 == LOW && editMode == EDIT){
+      targetAppTemp += 0.1;
+      // Serial.println("Button 2 Pressed");
+
+    }
+    delay(50);
   }
+  prevButtonVal2 = buttonVal2;
 
+  int buttonVal3 = digitalRead(decrease);
+  if(buttonVal3 != prevButtonVal3){
+    if(buttonVal3 == LOW && editMode == EDIT){
+      targetAppTemp -= 0.1;
+      // Serial.println("Button 3 Pressed");
+    }
+    delay(50);
+  }
+  prevButtonVal3 = buttonVal3;
+
+  int buttonVal4 = digitalRead(modeSel);
+  if(buttonVal4 != prevButtonVal4){
+    if(buttonVal4 == LOW){
+      // Serial.println("Button 4 Pressed");
+      if(editMode == ACTIVE){ editMode = EDIT;}
+      else{editMode = ACTIVE;}
+    }
+    delay(50);
+  }
+  prevButtonVal4 = buttonVal4;
+
+  if(isOn){
+    // int temp_second_flag = 0;
+    // int hum_second_flag = 0;
+    int second_flag =0;
+    long unsigned int second_counter =0;
+    float hum_reading;
+    float temp_reading;
+
+    int mode = TEMP_F_MODE;
+
+    float AvgHumidity;
+    float AvgTemperatureC;
+
+    if(millis() % 1000 == 1)
+    { //every second
+      second_flag = 1; //raise flag to signal average
+      second_counter++;
+    }
+    mode = TEMP_C_MODE;
+
+    if(second_flag == 1){
+      switch(mode)
+        {
+          case TEMP_F_MODE:
+            //printSensorReadings(rollingAvgHum(hum_reading, second_counter), rollingAvgTemp(temp_reading, second_counter), mode);
+            printSensorReadings(incomingTemp, incomingHum, mode);
+            updateFan(incomingTemp, incomingHum, mode);
+            break;
+          case TEMP_C_MODE:
+            printSensorReadings(incomingTemp, incomingHum, mode);
+            updateFan(incomingTemp, incomingHum, mode);
+            break;
+        }
+        second_flag = 0;
+    }
+  }
 }
 
 //extern unit8_t temp_icon[];
@@ -283,29 +344,6 @@ void updateFan(float incomingTemp, float incomingHum, int mode)
       break;
   }
   fanStateMachine();
-}
-
-void systemStateMachine(){
-  switch(systemState){
-    case WAKE_UP:
-
-      break;
-    case ACTIVE:
-
-      
-      
-      updateDisplay();
-      fanStateMachine();
-      break;
-    case SLEEP:
-
-      break;
-  }
-}
-
-
-void updateDisplay(){
-  // Look at graphics library to start coding
 }
 
 void fanStateMachine(){
