@@ -184,7 +184,7 @@ void loop() {
   int buttonVal1 = digitalRead(ON_OFF);
   if(buttonVal1 != prevButtonVal1){
     if(buttonVal1 == LOW){
-      // Serial.println("Button 1 Pressed");
+       Serial.println("Button 1 Pressed");
       isOn = !isOn;
     }
     delay(50);
@@ -194,8 +194,8 @@ void loop() {
   int buttonVal2 = digitalRead(increase);
   if(buttonVal2 != prevButtonVal2){
     if(buttonVal2 == LOW && editMode == EDIT){
-      targetAppTemp += 0.5;
-      // Serial.println("Button 2 Pressed");
+      targetAppTemp += 0.1;
+       Serial.println("Button 2 Pressed");
 
     }
     delay(50);
@@ -205,8 +205,8 @@ void loop() {
   int buttonVal3 = digitalRead(decrease);
   if(buttonVal3 != prevButtonVal3){
     if(buttonVal3 == LOW && editMode == EDIT){
-      targetAppTemp -= 0.5;
-      // Serial.println("Button 3 Pressed");
+      targetAppTemp -= 0.1;
+       Serial.println("Button 3 Pressed");
     }
     delay(50);
   }
@@ -215,7 +215,7 @@ void loop() {
   int buttonVal4 = digitalRead(modeSel);
   if(buttonVal4 != prevButtonVal4){
     if(buttonVal4 == LOW){
-      // Serial.println("Button 4 Pressed");
+       Serial.println("Button 4 Pressed");
       if(editMode == ACTIVE){ editMode = EDIT;}
       else{editMode = ACTIVE;}
     }
@@ -231,7 +231,7 @@ void loop() {
     float hum_reading;
     float temp_reading;
 
-    int mode = TEMP_F_MODE;
+    int temp_unit = TEMP_F_MODE;
 
     float AvgHumidity;
     float AvgTemperatureC;
@@ -241,19 +241,20 @@ void loop() {
       second_flag = 1; //raise flag to signal average
       second_counter++;
     }
-    mode = TEMP_C_MODE;
+    temp_unit = TEMP_C_MODE;
 
     if(second_flag == 1){
-      switch(mode)
+      switch(temp_unit)
         {
           case TEMP_F_MODE:
             //printSensorReadings(rollingAvgHum(hum_reading, second_counter), rollingAvgTemp(temp_reading, second_counter), mode);
-            printSensorReadings(incomingTemp, incomingHum, mode);
-            updateFan(incomingTemp, incomingHum, mode);
+            printSensorReadings(incomingTemp, incomingHum, temp_unit);
+            updateFan(incomingTemp, incomingHum, temp_unit);
             break;
           case TEMP_C_MODE:
-            printSensorReadings(incomingTemp, incomingHum, mode);
-            updateFan(incomingTemp, incomingHum, mode);
+            //printSensorReadings(incomingTemp, incomingHum, temp_unit);
+            printSensorReadings(92.85, incomingHum, temp_unit);
+            updateFan(incomingTemp, incomingHum, temp_unit);
             break;
         }
         second_flag = 0;
@@ -261,70 +262,118 @@ void loop() {
   }
 }
 
+
+
 //extern unit8_t temp_icon[];
+#define TEMP_DISP_VERT_COORD 100
+int blink =0;
 void printSensorReadings(float temperature, float humidity, int mode) //-------------------------------------------------------------------------------------
 { 
-  //if temperature reads below one digit, place a black box after temperature (may not be needed)
-  if(temperature < 10){
-    //tft.fillRect(); //print black box where value will be. 
-  }
-
-  //if humidity reads below one digit, place a black box after temperature
-  if(humidity < 10){
-    //tft.fillRect(); //print black box where value will be. 
-  }
-
-  //tft.drawRectangle();
-  //draw bounding boxes around values
-  // tft.fillRoundRect(25, 10, 78, 60, 8, ST77XX_WHITE);
-  // tft.fillRoundRect(25, 90, 78, 60, 8, ST77XX_WHITE);
-
-  //display temperature reading
-  tft.setTextSize(4);
+  
   tft.setTextWrap(false);
-  //tft.setFont(&FreeSerif9pt7b);
-  tft.setCursor(0, 10);
-  //tft.setTextColor(0xff4112);
-  tft.setTextColor(ST77XX_RED, ST77XX_BLACK); //set text to white and background to black
+  tft.setTextSize(4);
+  tft.setTextColor(ST77XX_CYAN, ST77XX_BLACK);
 
-  tft.cp437(true); // Use correct CP437 character codes
-  tft.print(temperature);
+    //if there is no temperature reading, print a no signal message
+    if(temperature == 0)
+    {
+      blink++; 
+      if(blink % 2 == 0)
+      {
+        tft.setCursor(54, TEMP_DISP_VERT_COORD-50);
+        tft.println("NO SIGNAL");
+      }
+      if(blink % 2 == 1)
+      {
+        tft.setTextColor(ST77XX_BLACK, ST77XX_BLACK);
+        tft.setCursor(54, TEMP_DISP_VERT_COORD-50);
+        tft.println("NO SIGNAL");
+      }
 
-  tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK); //set text to white and background to black
-  tft.write(0xF8); // Print the degrees symbol
+      tft.setTextColor(ST77XX_CYAN, ST77XX_BLACK);
+      tft.setTextSize(2);
+      tft.setCursor(83, TEMP_DISP_VERT_COORD+30);
+      tft.println("Please Ensure");
+      tft.setCursor(59, TEMP_DISP_VERT_COORD+46);
+      tft.print("Connection to Pad");
+    }
+    else
+    {
+    //tft.drawRectangle();
+    //draw bounding boxes around values
+    // tft.fillRoundRect(25, 10, 78, 60, 8, ST77XX_WHITE);
+    // tft.fillRoundRect(25, 90, 78, 60, 8, ST77XX_WHITE);
 
-  switch(mode)
-  {
-    case TEMP_F_MODE:
-    
-      tft.println("F");
-      
+    //display temperature reading
+    // tft.setCursor(30, 100);
+    // tft.setTextSize(6);
+
+    if(temperature < 10 && temperature > 0) // if text is three digits, make smaller.
+    {
+      tft.setCursor(55, TEMP_DISP_VERT_COORD);
+      tft.setTextSize(6);
+    }
+    if(temperature < 100 && temperature >= 10) // if text is three digits, make smaller.
+    {
+      tft.setCursor(37, TEMP_DISP_VERT_COORD);
+      tft.setTextSize(6);
+    }
+    if(temperature < 1000 && temperature >= 100) // if text is three digits, make smaller.
+    {
+      tft.setCursor(19, TEMP_DISP_VERT_COORD);
+      tft.setTextSize(6);
+    }
+    //tft.setFont(&FreeSerif9pt7b);
+    //tft.setTextColor(0xff4112);
+
+    tft.setTextColor(ST77XX_RED, ST77XX_BLACK); //set text to white and background to black
+    tft.cp437(true); // Use correct CP437 character codes
+    tft.print(temperature);
+
+    tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK); //set text to white and background to black
+    tft.write(0xF8); // Print the degrees symbol
+
+    switch(mode)
+    {
+      case TEMP_F_MODE:    
+        tft.println("F");   
       break;
-    case TEMP_C_MODE:
-      //tft.println("C");
-      tft.println("C");
-      
+      case TEMP_C_MODE:
+        tft.println("C");   
       break;
+    }
+
+    tft.setTextColor(ST77XX_CYAN, ST77XX_BLACK); //set text to white and background to black
+
+    //Display Fan Speed
+
+    tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
+    tft.setTextSize(3);
+    tft.setCursor(10, 150);
+    tft.print("Fan Speed:");
+    tft.setCursor(187, 150);
+    tft.print("50");
+    tft.write(0x25); //% symbol
+    //dislay humidity reading
+    //tft.setCursor(10, 100);
+    //tft.setTextColor(0x8fbaff);
+    // tft.setTextSize(1);
+    // //tft.println("----------------");
+    // void drawFastHLine(0, 60, 320, ST77XX_WHITE);
+    //tft.drawLine(0, 60, x, tft.height() - 1, color);
+    //tft.setTextSize(3);
+
+
+    // tft.print(humidity); 
+    // tft.write(0x25); //% symbol
+    // tft.println();
+
+    // tft.setTextSize(3);
+    // tft.println("User Setting:");
+    // tft.print("HOT");
+
+    //drawBitmap(300, 10, 24, 24 temp_icon, ST77XX_WHITE);
   }
-
-   tft.setTextColor(ST77XX_CYAN, ST77XX_BLACK); //set text to white and background to black
-  //dislay humidity reading
-  //tft.setCursor(10, 100);
-  //tft.setTextColor(0x8fbaff);
-  // tft.setTextSize(1);
-  // //tft.println("----------------");
-  // void drawFastHLine(0, 60, 320, ST77XX_WHITE);
-  //tft.drawLine(0, 60, x, tft.height() - 1, color);
-  //tft.setTextSize(3);
-  tft.print(humidity); 
-  tft.write(0x25); //% symbol
-  tft.println();
-
-  // tft.setTextSize(3);
-  // tft.println("User Setting:");
-  // tft.print("HOT");
-
-  //drawBitmap(300, 10, 24, 24 temp_icon, ST77XX_WHITE);
 }
 
 void updateFan(float incomingTemp, float incomingHum, int mode)
@@ -335,11 +384,13 @@ void updateFan(float incomingTemp, float incomingHum, int mode)
       
       break;
     case TEMP_C_MODE:
-      if(incomingTemp < 24)
+      if(incomingTemp < 26)
         fanState = OFF;
-      else if(incomingTemp < 25)
+      else if(incomingTemp < 29)
+        fanState = ONE;
+      else if(incomingTemp < 32)
         fanState = TWO;
-      else if(incomingTemp < 26)
+      else if(incomingTemp >= 32)
         fanState = THREE;
       break;
   }
