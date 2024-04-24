@@ -79,7 +79,7 @@ unsigned long timer;
 // Any Enums
 //enum SystemState {WAKE_UP, ACTIVE, SLEEP} systemState;
 enum FanState {OFF, ONE, TWO, THREE} fanState;
-enum Mode {ACTIVE, EDIT} editMode;
+enum Mode {ACTIVE, EDIT_TEMP, EDIT_UNIT} editMode;
 
 
 typedef struct inMessage{
@@ -97,6 +97,8 @@ int buttonVal3, prevButtonVal3;
 int buttonVal4, prevButtonVal4;
 
 volatile float targetAppTemp = 22.50;
+int temp_unit = TEMP_C_MODE;
+int dispRefresh = 0;
 
 unsigned long currTime = 0;
 
@@ -193,36 +195,47 @@ void loop() {
   }
   prevButtonVal1 = buttonVal1;
 
-  int buttonVal2 = digitalRead(increase);
   if(buttonVal2 != prevButtonVal2){
-    if(buttonVal2 == LOW && editMode == EDIT){
-      targetAppTemp += 0.1;
-       Serial.println("Button 2 Pressed");
-
+    if(buttonVal2 == LOW){
+      if(editMode == EDIT_TEMP){
+        targetAppTemp += 0.1;
+        Serial.println("Button 2 Pressed");
+      }else if(editMode == EDIT_UNIT){
+        temp_unit = TEMP_C_MODE;
+      }
     }
     delay(50);
   }
-  prevButtonVal2 = buttonVal2;
-
-  int buttonVal3 = digitalRead(decrease);
   if(buttonVal3 != prevButtonVal3){
-    if(buttonVal3 == LOW && editMode == EDIT){
-      targetAppTemp -= 0.1;
-       Serial.println("Button 3 Pressed");
+    if(buttonVal3 == LOW){
+      if(editMode == EDIT_TEMP){
+        targetAppTemp -= 0.1;
+        Serial.println("Button 3 Pressed");
+      }else if(editMode == EDIT_UNIT){
+        temp_unit = TEMP_F_MODE;
+      }
     }
     delay(50);
   }
-  prevButtonVal3 = buttonVal3;
-
   int buttonVal4 = digitalRead(modeSel);
   if(buttonVal4 != prevButtonVal4){
     if(buttonVal4 == LOW){
        Serial.println("Button 4 Pressed");
-      if(editMode == ACTIVE)
-      { 
-        editMode = EDIT;
+      dispRefresh = 0;
+      switch(editMode){
+        case ACTIVE:{
+          editMode = EDIT_TEMP;
+          break;
+        }
+        case EDIT_TEMP:{
+          editMode = EDIT_UNIT;
+          break;
+        }
+        case EDIT_UNIT:{
+          editMode = ACTIVE;
+          break;
+        }
       }
-      else{editMode = ACTIVE;}
     }
     delay(50);
   }
@@ -234,8 +247,6 @@ void loop() {
     long unsigned int second_counter =0;
     float hum_reading;
     float temp_reading;
-
-    int temp_unit;
 
     float AvgHumidity;
     float AvgTemperatureC;
@@ -253,7 +264,6 @@ void loop() {
           second_flag = 1; //raise flag to signal average
           second_counter++;
         }
-        temp_unit = TEMP_C_MODE;
     
         if(second_flag == 1){
           switch(temp_unit)
@@ -272,11 +282,24 @@ void loop() {
             second_flag = 0;
         }
         break;
-      case EDIT:
+      case EDIT_TEMP:
         if(dispRefresh==0){
           tft.fillScreen(ST77XX_BLACK);
         }
-        dispRefresh =1;
+        dispRefresh = 1;
+        //Button 1 - ON/OFF
+        //Button 2 - UP
+        //Button 3 - DOWN
+        //Button 4 - Mode Sel
+
+        displayEditMode(targetAppTemp, temp_unit);
+
+        break;
+      case EDIT_UNIT:
+        if(dispRefresh==0){
+          tft.fillScreen(ST77XX_BLACK);
+        }
+        dispRefresh = 1;
         //Button 1 - ON/OFF
         //Button 2 - UP
         //Button 3 - DOWN
