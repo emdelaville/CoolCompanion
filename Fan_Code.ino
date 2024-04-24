@@ -50,7 +50,8 @@ Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
 //function prototypes
 float rollingAvgTemp(float temperatureReading, int second_counter);
 float rollingAvgHum(float humidityReading, int second_counter);
-void printSensorReadings(float temperature, float humidity, int mode);
+void printSensorReadings(float temperature, float humidity, int mode, int targetTemp);
+void displayEditMode(float targetTemp, int mode);
 //Display Initalization end //----------------------
 
 void updateFan(float incomingTemp, float incomingHum, int mode);
@@ -95,7 +96,7 @@ int buttonVal2, prevButtonVal2;
 int buttonVal3, prevButtonVal3;
 int buttonVal4, prevButtonVal4;
 
-volatile float targetAppTemp = 22.0;
+volatile float targetAppTemp = 22.50;
 
 unsigned long currTime = 0;
 
@@ -181,6 +182,7 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
 
+  //Buttons 
   int buttonVal1 = digitalRead(ON_OFF);
   if(buttonVal1 != prevButtonVal1){
     if(buttonVal1 == LOW){
@@ -216,7 +218,10 @@ void loop() {
   if(buttonVal4 != prevButtonVal4){
     if(buttonVal4 == LOW){
        Serial.println("Button 4 Pressed");
-      if(editMode == ACTIVE){ editMode = EDIT;}
+      if(editMode == ACTIVE)
+      { 
+        editMode = EDIT;
+      }
       else{editMode = ACTIVE;}
     }
     delay(50);
@@ -224,20 +229,25 @@ void loop() {
   prevButtonVal4 = buttonVal4;
 
   if(isOn){
-    switch(editMode){
+
+    int second_flag =0;
+    long unsigned int second_counter =0;
+    float hum_reading;
+    float temp_reading;
+
+    int temp_unit;
+
+    float AvgHumidity;
+    float AvgTemperatureC;
+    switch(editMode)
+    {
       case ACTIVE:
-        // int temp_second_flag = 0;
-        // int hum_second_flag = 0;
-        int second_flag =0;
-        long unsigned int second_counter =0;
-        float hum_reading;
-        float temp_reading;
-    
-        int temp_unit = TEMP_F_MODE;
-    
-        float AvgHumidity;
-        float AvgTemperatureC;
-    
+
+        if(dispRefresh==0){
+          tft.fillScreen(ST77XX_BLACK);
+        }
+        dispRefresh = 1;
+
         if(millis() % 1000 == 1)
         { //every second
           second_flag = 1; //raise flag to signal average
@@ -250,12 +260,12 @@ void loop() {
             {
               case TEMP_F_MODE:
                 //printSensorReadings(rollingAvgHum(hum_reading, second_counter), rollingAvgTemp(temp_reading, second_counter), mode);
-                printSensorReadings(incomingTemp, incomingHum, temp_unit);
+                printSensorReadings(incomingTemp, incomingHum, temp_unit, targetAppTemp);
                 updateFan(incomingTemp, incomingHum, temp_unit);
                 break;
               case TEMP_C_MODE:
                 //printSensorReadings(incomingTemp, incomingHum, temp_unit);
-                printSensorReadings(92.85, incomingHum, temp_unit);
+                printSensorReadings(92.85, incomingHum, temp_unit, targetAppTemp);
                 updateFan(incomingTemp, incomingHum, temp_unit);
                 break;
             }
@@ -263,20 +273,54 @@ void loop() {
         }
         break;
       case EDIT:
-        
+        if(dispRefresh==0){
+          tft.fillScreen(ST77XX_BLACK);
+        }
+        dispRefresh =1;
+        //Button 1 - ON/OFF
+        //Button 2 - UP
+        //Button 3 - DOWN
+        //Button 4 - Mode Sel
+
+        displayEditMode(targetAppTemp, temp_unit);
+
         break;
     }
   }
 }
 
 
+#define TEMP_DISP_VERT_COORD 50
+void displayEditMode(float targetTemp, int mode)
+{
+  tft.setTextWrap(false);
+  tft.setTextSize(4);
+  tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
+  tft.setCursor(55, TEMP_DISP_VERT_COORD);
+  tft.setTextSize(6);
 
-//extern unit8_t temp_icon[];
-#define TEMP_DISP_VERT_COORD 100
+  tft.cp437(true); // Use correct CP437 character codes
+  tft.print(targetTemp);
+
+  tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK); //set text to white and background to black
+  tft.write(0xF8); // Print the degrees symbol
+
+  switch(mode)
+  {
+    case TEMP_F_MODE:    
+      tft.println("F");   
+    break;
+    case TEMP_C_MODE:
+      tft.println("C");   
+    break;
+  }
+}
+
+
+
 int blink =0;
-void printSensorReadings(float temperature, float humidity, int mode) //-------------------------------------------------------------------------------------
+void printSensorReadings(float temperature, float humidity, int mode, int targetTemp) //-------------------------------------------------------------------------------------
 { 
-  
   tft.setTextWrap(false);
   tft.setTextSize(4);
   tft.setTextColor(ST77XX_CYAN, ST77XX_BLACK);
@@ -287,21 +331,21 @@ void printSensorReadings(float temperature, float humidity, int mode) //--------
       blink++; 
       if(blink % 2 == 0)
       {
-        tft.setCursor(54, TEMP_DISP_VERT_COORD-50);
+        tft.setCursor(54, 50);
         tft.println("NO SIGNAL");
       }
       if(blink % 2 == 1)
       {
         tft.setTextColor(ST77XX_BLACK, ST77XX_BLACK);
-        tft.setCursor(54, TEMP_DISP_VERT_COORD-50);
+        tft.setCursor(54, 50);
         tft.println("NO SIGNAL");
       }
 
       tft.setTextColor(ST77XX_CYAN, ST77XX_BLACK);
       tft.setTextSize(2);
-      tft.setCursor(83, TEMP_DISP_VERT_COORD+30);
+      tft.setCursor(83, 80);
       tft.println("Please Ensure");
-      tft.setCursor(59, TEMP_DISP_VERT_COORD+46);
+      tft.setCursor(59, 126);
       tft.print("Connection to Pad");
     }
     else
@@ -350,9 +394,42 @@ void printSensorReadings(float temperature, float humidity, int mode) //--------
       break;
     }
 
+    //tft.fillRoundRect(25, 10, 78, 60, 8, ST77XX_WHITE);
+    //display target temperature
     tft.setTextColor(ST77XX_CYAN, ST77XX_BLACK); //set text to white and background to black
 
-    //Display Fan Speed
+    if(targetTemp < 10 && targetTemp > 0) 
+    {
+      tft.setCursor(90, TEMP_DISP_VERT_COORD+50);
+      tft.setTextSize(4);
+    }
+    if(targetTemp < 100 && targetTemp >= 10) 
+    {
+      tft.setCursor(78, TEMP_DISP_VERT_COORD+50);
+      tft.setTextSize(4);
+    }
+    if(targetTemp < 1000 && targetTemp >= 100) 
+    {
+      tft.setCursor(66, TEMP_DISP_VERT_COORD+50);
+      tft.setTextSize(4);
+    }
+
+    tft.setTextColor(ST77XX_RED, ST77XX_BLACK); //set text to white and background to black
+    tft.cp437(true); // Use correct CP437 character codes
+    tft.print(targetTemp);
+
+    tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK); //set text to white and background to black
+    tft.write(0xF8); // Print the degrees symbol
+
+    switch(mode)
+    {
+      case TEMP_F_MODE:    
+        tft.println("F");   
+      break;
+      case TEMP_C_MODE:
+        tft.println("C");   
+      break;
+    }
 
     tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
     tft.setTextSize(3);
