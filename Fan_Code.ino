@@ -194,7 +194,7 @@ void loop() {
   int buttonVal2 = digitalRead(increase);
   if(buttonVal2 != prevButtonVal2){
     if(buttonVal2 == LOW && editMode == EDIT){
-      targetAppTemp += 0.1;
+      targetAppTemp += 0.5;
       // Serial.println("Button 2 Pressed");
 
     }
@@ -205,7 +205,7 @@ void loop() {
   int buttonVal3 = digitalRead(decrease);
   if(buttonVal3 != prevButtonVal3){
     if(buttonVal3 == LOW && editMode == EDIT){
-      targetAppTemp -= 0.1;
+      targetAppTemp -= 0.5;
       // Serial.println("Button 3 Pressed");
     }
     delay(50);
