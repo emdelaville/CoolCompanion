@@ -198,7 +198,7 @@ void loop() {
   if(buttonVal2 != prevButtonVal2){
     if(buttonVal2 == LOW){
       if(editMode == EDIT_TEMP){
-        targetAppTemp += 0.1;
+        targetAppTemp += 0.5;
         Serial.println("Button 2 Pressed");
       }else if(editMode == EDIT_UNIT){
         temp_unit = TEMP_C_MODE;
@@ -209,7 +209,7 @@ void loop() {
   if(buttonVal3 != prevButtonVal3){
     if(buttonVal3 == LOW){
       if(editMode == EDIT_TEMP){
-        targetAppTemp -= 0.1;
+        targetAppTemp -= 0.5;
         Serial.println("Button 3 Pressed");
       }else if(editMode == EDIT_UNIT){
         temp_unit = TEMP_F_MODE;
@@ -304,8 +304,17 @@ void loop() {
         //Button 2 - UP
         //Button 3 - DOWN
         //Button 4 - Mode Sel
+    
+        tft.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
+        tft.setTextSize(3);
+        tft.setCursor(30, 100);
+        tft.print("Select:");
+        tft.setCursor(120, 100);
+        tft.write(0x58);
+        tft.print("C or ");
+        tft.write(0x58);
+        tft.print("F");
 
-        displayEditMode(targetAppTemp, temp_unit);
 
         break;
     }
