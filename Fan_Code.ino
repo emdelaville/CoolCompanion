@@ -224,40 +224,47 @@ void loop() {
   prevButtonVal4 = buttonVal4;
 
   if(isOn){
-    // int temp_second_flag = 0;
-    // int hum_second_flag = 0;
-    int second_flag =0;
-    long unsigned int second_counter =0;
-    float hum_reading;
-    float temp_reading;
-
-    int temp_unit = TEMP_F_MODE;
-
-    float AvgHumidity;
-    float AvgTemperatureC;
-
-    if(millis() % 1000 == 1)
-    { //every second
-      second_flag = 1; //raise flag to signal average
-      second_counter++;
-    }
-    temp_unit = TEMP_C_MODE;
-
-    if(second_flag == 1){
-      switch(temp_unit)
-        {
-          case TEMP_F_MODE:
-            //printSensorReadings(rollingAvgHum(hum_reading, second_counter), rollingAvgTemp(temp_reading, second_counter), mode);
-            printSensorReadings(incomingTemp, incomingHum, temp_unit);
-            updateFan(incomingTemp, incomingHum, temp_unit);
-            break;
-          case TEMP_C_MODE:
-            //printSensorReadings(incomingTemp, incomingHum, temp_unit);
-            printSensorReadings(92.85, incomingHum, temp_unit);
-            updateFan(incomingTemp, incomingHum, temp_unit);
-            break;
+    switch(editMode){
+      case ACTIVE:
+        // int temp_second_flag = 0;
+        // int hum_second_flag = 0;
+        int second_flag =0;
+        long unsigned int second_counter =0;
+        float hum_reading;
+        float temp_reading;
+    
+        int temp_unit = TEMP_F_MODE;
+    
+        float AvgHumidity;
+        float AvgTemperatureC;
+    
+        if(millis() % 1000 == 1)
+        { //every second
+          second_flag = 1; //raise flag to signal average
+          second_counter++;
         }
-        second_flag = 0;
+        temp_unit = TEMP_C_MODE;
+    
+        if(second_flag == 1){
+          switch(temp_unit)
+            {
+              case TEMP_F_MODE:
+                //printSensorReadings(rollingAvgHum(hum_reading, second_counter), rollingAvgTemp(temp_reading, second_counter), mode);
+                printSensorReadings(incomingTemp, incomingHum, temp_unit);
+                updateFan(incomingTemp, incomingHum, temp_unit);
+                break;
+              case TEMP_C_MODE:
+                //printSensorReadings(incomingTemp, incomingHum, temp_unit);
+                printSensorReadings(92.85, incomingHum, temp_unit);
+                updateFan(incomingTemp, incomingHum, temp_unit);
+                break;
+            }
+            second_flag = 0;
+        }
+        break;
+      case EDIT:
+        
+        break;
     }
   }
 }
